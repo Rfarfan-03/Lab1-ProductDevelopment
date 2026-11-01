@@ -1,0 +1,82 @@
+# Configuración del Motor de Reposición de Inventario.
+# Todo lo que cambie el comportamiento del producto vive aquí (versionado en Git),
+# no en el código. Rutas relativas a la raíz del repositorio.
+
+rutas:
+  kaggle: data/kaggle            # aquí se colocan train.csv, stores.csv, oil.csv, holidays_events.csv, transactions.csv
+  historico: data/historico      # carga histórica inicial (generada desde Kaggle)
+  bandeja: data/bandeja          # sistema de origen simulado (solo lectura para el flujo)
+  staging: data/staging          # datos ingeridos y validados (consolidado as-of)
+  cuarentena: data/cuarentena    # archivos rechazados por validación
+  features: data/features
+  modelos: data/modelos
+  publicados: data/publicados    # pronósticos y pedidos publicados (inmutables)
+  seguimiento: data/seguimiento
+  reportes: reportes
+
+simulacion:
+  # Última fecha incluida en la carga histórica. Todo lo posterior llega por la bandeja.
+  # null => se calcula como (última fecha de train.csv - dias_bandeja).
+  fecha_fin_historico: null
+  dias_bandeja: 45
+  semilla: 42
+  fuentes:
+    # retraso_dias: días después de la fecha del dato en que se entrega el archivo.
+    ventas:        {retraso_dias: 1}   # cierre del día, llega al día siguiente
+    transacciones: {retraso_dias: 2}   # llega con más retraso que ventas
+    petroleo:      {retraso_dias: 1, solo_dias_habiles: true}
+    promociones:   {anticipacion_dias: 14}   # plan de promociones conocido por adelantado
+    feriados:      {anticipacion_dias: 30}   # calendario publicado con anticipación
+  correcciones:
+    fraccion_archivos: 0.10        # fracción de archivos de ventas que se re-entregan corregidos
+    retraso_dias: 3                # días después de la primera entrega
+    fraccion_filas: 0.02           # fracción de filas modificadas en un archivo corregido
+  faltantes:
+    fraccion_archivos_transacciones: 0.05   # archivos que nunca llegan (situación esperada)
+
+operacion:
+  dia_pronostico: 0          # 0 = lunes. Día de la semana en que se emite pronóstico y pedido.
+  horizonte_dias: 7          # días pronosticados después de la fecha de corte
+  cuantiles: [0.1, 0.5, 0.9] # cuantiles publicados para expresar incertidumbre
+
+validacion:
+  max_fraccion_filas_invalidas: 0.01   # más que esto => el archivo completo va a cuarentena
+  max_venta_razonable: 200000          # ventas diarias por tienda-familia por encima => inválidas
+
+modelo:
+  semilla: 42
+  semanas_validacion: 8        # cortes semanales usados en el backtest temporal
+  semanas_entrenamiento: 104   # historia usada para construir ejemplos de entrenamiento
+  criterio_reemplazo:
+    # El retador reemplaza al vigente si reduce el costo de negocio en el backtest
+    # al menos en esta proporción y no empeora el WAPE más que la tolerancia.
+    mejora_minima_costo: 0.02
+    tolerancia_wape: 0.01
+  lightgbm:
+    n_estimators: 400
+    learning_rate: 0.05
+    num_leaves: 63
+    min_child_samples: 50
+    subsample: 0.8
+    subsample_freq: 1
+    colsample_bytree: 0.8
+
+# Costos de negocio por unidad. Cambiarlos cambia el pedido sugerido sin tocar el código.
+#   costo_quiebre: margen perdido por cada unidad demandada que no se tenía (stockout)
+#   costo_merma:   costo de cada unidad pedida que no se vendió (merma / sobreinventario)
+# Cuantil crítico (newsvendor) = costo_quiebre / (costo_quiebre + costo_merma)
+costos:
+  default:
+    costo_quiebre: 1.0
+    costo_merma: 0.3
+  por_familia:
+    # Perecederos: la merma es cara.
+    PRODUCE:        {costo_quiebre: 1.0, costo_merma: 0.9}
+    "BREAD/BAKERY": {costo_quiebre: 1.0, costo_merma: 0.9}
+    DAIRY:          {costo_quiebre: 1.0, costo_merma: 0.6}
+    DELI:           {costo_quiebre: 1.0, costo_merma: 0.8}
+    EGGS:           {costo_quiebre: 1.0, costo_merma: 0.6}
+    MEATS:          {costo_quiebre: 1.0, costo_merma: 0.8}
+    POULTRY:        {costo_quiebre: 1.0, costo_merma: 0.8}
+    SEAFOOD:        {costo_quiebre: 1.0, costo_merma: 1.0}
+    "PREPARED FOODS": {costo_quiebre: 1.0, costo_merma: 1.0}
