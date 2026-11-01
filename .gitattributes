@@ -1,0 +1,7 @@
+# Finales de línea LF para archivos que se generan o ejecutan dentro de Linux (Docker)
+*.sh text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.dvc text eol=lf

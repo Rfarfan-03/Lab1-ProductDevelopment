@@ -88,3 +88,11 @@
 - **Decisión:** un pronóstico publicado no se modifica cuando llega una corrección de datos posterior. La corrección se incorpora en la ingesta de los días siguientes: en los próximos entrenamientos y pronósticos, y en el seguimiento, que siempre compara contra la versión corregida de las ventas.
 - **Alternativas:** re-publicar los pronósticos afectados.
 - **Justificación:** el pedido ya se emitió con la información de ese momento. Re-publicarlo rompería la trazabilidad (qué se recomendó y con qué datos). El seguimiento sí debe medir contra la venta real corregida.
+
+## Versionado de datos
+
+### D15. DVC con remoto local, una salida `.dvc` por carpeta de datos
+- **Decisión:** se versionan con DVC las carpetas `data/kaggle` (entrada original), `historico` y `bandeja` (entrada simulada), `staging`, `cuarentena` y `features` (procesados), `modelos`, `publicados` y `seguimiento`. El remoto es una carpeta local fuera del repositorio (`../dvc-remote-lab1`). Después de operar un periodo se ejecuta `scripts/versionar_datos.sh` (`dvc add` + `dvc push`) y se hace commit de los `data/*.dvc`.
+- **Alternativas:** un remoto en la nube (DagsHub, S3); un pipeline `dvc.yaml` que re-ejecute todo; ejecutar `dvc add` dentro de Airflow.
+- **Justificación:** el remoto local es el más simple y es el que se vio en clase. Los docentes reconstruyen todo desde los archivos de Kaggle, así que no necesitan acceso al remoto. La orquestación queda en Airflow y DVC solo versiona; meter Git y DVC en los contenedores agregaría credenciales y complejidad.
+- **Reproducción:** `scripts/reproducir_pronostico.sh <corte>` restaura los datos de la versión de Git activa, borra las features, el modelo y lo publicado de ese corte, los regenera en el mismo contenedor de Airflow y verifica con `dvc status` que el resultado sea idéntico. Esto funciona porque todo es determinista: semillas fijas, LightGBM con `deterministic=True` y un número fijo de hilos.
