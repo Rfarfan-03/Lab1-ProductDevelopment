@@ -76,3 +76,15 @@
 ### D12. Criterio de reemplazo del modelo vigente
 - **Decisión:** el vigente inicial es el baseline. Cada semana se evalúan todos los candidatos en la misma ventana. El mejor retador reemplaza al vigente si reduce el costo de negocio al menos un 2% y no empeora el WAPE más de 0.01 (configurable). El vigente se reentrena con toda la historia antes de publicar.
 - **Justificación:** la decisión se basa en la métrica de negocio, con un margen para no cambiar de modelo por ruido. En el primer corte real, LightGBM redujo el costo un 27% (WAPE 0.127 vs. 0.151) y reemplazó al baseline.
+
+## Orquestación
+
+### D13. Un DAG diario con catchup; el pronóstico se activa los lunes
+- **Decisión:** el DAG `reposicion_diaria` corre una vez por fecha de corte: `simular_origen → ingerir_y_validar → es_dia_pronostico → preparar_datos → entrenar_y_evaluar → pronosticar_y_publicar → seguimiento`. Un *short-circuit* omite los pasos de pronóstico los días que no son lunes (sin fallar) y el seguimiento corre todos los días. Las fechas de inicio y fin del DAG se derivan de `train.csv`, y tiene `catchup=True` y `max_active_runs=1`.
+- **Alternativas:** varios DAGs conectados por Assets; un DAG semanal separado del diario.
+- **Justificación:** con un solo DAG y los días en orden, el backfill es simplemente el catchup del periodo, y el modelo vigente de un lunes depende de la decisión del lunes anterior. Como cada tarea es idempotente, re-ejecutar cualquier día (o un rango con `airflow backfill`) da el mismo resultado. El paso `simular_origen` representa al sistema externo; si los archivos de Kaggle no cambiaron, no hace nada.
+
+### D14. Correcciones posteriores a una publicación
+- **Decisión:** un pronóstico publicado no se modifica cuando llega una corrección de datos posterior. La corrección se incorpora en la ingesta de los días siguientes: en los próximos entrenamientos y pronósticos, y en el seguimiento, que siempre compara contra la versión corregida de las ventas.
+- **Alternativas:** re-publicar los pronósticos afectados.
+- **Justificación:** el pedido ya se emitió con la información de ese momento. Re-publicarlo rompería la trazabilidad (qué se recomendó y con qué datos). El seguimiento sí debe medir contra la venta real corregida.
