@@ -27,10 +27,18 @@ simulacion:
     petroleo:      {retraso_dias: 1, solo_dias_habiles: true}
     promociones:   {anticipacion_dias: 14}   # plan de promociones conocido por adelantado
     feriados:      {anticipacion_dias: 30}   # calendario publicado con anticipación
+  # Situaciones de operación real que se inyectan en la bandeja (todas sobre archivos de ventas,
+  # salvo faltantes). En correcciones e inválidos, la v1 trae el error y la v2 los valores reales.
   correcciones:
-    fraccion_archivos: 0.10        # fracción de archivos de ventas que se re-entregan corregidos
-    retraso_dias: 3                # días después de la primera entrega
-    fraccion_filas: 0.02           # fracción de filas modificadas en un archivo corregido
+    fraccion_archivos: 0.10        # v1 con valores erróneos pero plausibles; v2 corrige
+    retraso_dias: 3                # días entre la entrega de v1 y la de v2
+    fraccion_filas: 0.02           # fracción de filas alteradas en la v1
+  invalidos:
+    fraccion_archivos: 0.04        # v1 con filas inválidas (ventas negativas) => cuarentena; v2 corrige
+    fraccion_filas: 0.05
+  tardios:
+    fraccion_archivos: 0.05        # archivos de ventas que llegan con retraso extra
+    retraso_extra_dias: 2
   faltantes:
     fraccion_archivos_transacciones: 0.05   # archivos que nunca llegan (situación esperada)
 

@@ -1,6 +1,6 @@
 # Dependencias de la lógica del producto (se instalan también en la imagen de Airflow).
 pandas>=2.2,<3
-numpy>=1.26,<3
+numpy>=1.26,<2.4
 pyarrow>=15
 lightgbm>=4.3,<5
 pyyaml>=6
