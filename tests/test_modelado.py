@@ -113,4 +113,10 @@ def test_seguimiento_compara_con_reales(operado):
     res = seguimiento(cfg, fecha)
     assert len(res) == 1 and res["dias_con_real"].iloc[0] == 7
     assert {"wape", "costo_negocio", "nivel_servicio"} <= set(res.columns)
-    assert (cfg.ruta("reportes") / "seguimiento.md").exists()
+    reporte = cfg.ruta("reportes") / "seguimiento.md"
+    assert fecha.strftime("%Y-%m-%d") in reporte.read_text(encoding="utf-8")
+
+    # Re-ejecutar un día anterior (backfill) no debe retroceder el reporte.
+    ingerir(cfg, fecha - pd.Timedelta(days=2))
+    seguimiento(cfg, fecha - pd.Timedelta(days=2))
+    assert fecha.strftime("%Y-%m-%d") in reporte.read_text(encoding="utf-8")

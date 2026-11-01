@@ -64,5 +64,8 @@ def seguimiento(cfg: Config, fecha) -> pd.DataFrame:
             filas.append(fila)
         res = pd.DataFrame(filas)
     io.escribir_parquet(res, destino / "seguimiento.parquet")
-    reporte_seguimiento(cfg, res, fecha)
+    # El reporte muestra la fecha más reciente: re-ejecutar un día pasado (backfill) no lo retrocede.
+    fechas = [pd.Timestamp(p.name.split("=")[1]) for p in cfg.ruta("seguimiento").glob("fecha=*")]
+    if fecha >= max(fechas):
+        reporte_seguimiento(cfg, res, fecha)
     return res
