@@ -50,3 +50,29 @@
 - **Decisión:** una corrección llega como un archivo nuevo `__v2` (la bandeja nunca se sobreescribe). En cada fecha de corte, la ingesta reconstruye el staging desde cero con la versión válida más reciente entregada hasta ese día.
 - **Alternativas:** aplicar las correcciones de forma incremental (upsert) sobre una tabla acumulada.
 - **Justificación:** reconstruir es idempotente y reproduce exactamente lo que se sabía en un corte pasado, lo que permite el backfill. Con un upsert, el estado depende del orden de ejecución. Con estos datos el costo es bajo (~4 s por corte).
+
+## Modelado
+
+### D8. Las features solo usan lo conocido en el corte
+- **Decisión:** para el corte `c` y el día objetivo `c+h`, las ventas se toman hasta `c-1`. Las promociones y los feriados del día objetivo se usan porque ya fueron publicados en `c`. Los rezagos del mismo día de la semana saltan las semanas que todavía no se conocen.
+- **Justificación:** es el principio point-in-time aplicado al modelo. Una prueba lo verifica: si se alteran las ventas desde `c`, las features no cambian.
+
+### D9. Baseline simple y LightGBM global; sin deep learning
+- **Decisión:** el baseline es el promedio del mismo día de la semana en las últimas 4 semanas. El modelo de ML es un LightGBM global (todas las tiendas-familias en un solo modelo) entrenado sobre `log1p(ventas)` con features de ventanas, calendario, promociones, feriados, transacciones y petróleo.
+- **Alternativas:** un modelo por serie (ARIMA/ETS, son 1 782 series); deep learning (N-BEATS, TFT).
+- **Justificación:** un modelo global comparte información entre series con poca venta y entrena en unos 30 s. El deep learning implicaría más costo de cómputo y de operación (GPU, tiempos de entrenamiento semanales) sin una ganancia demostrada en esta escala de datos, así que no se usó.
+
+### D10. Validación temporal idéntica para todos los modelos
+- **Decisión:** en cada entrenamiento semanal se usan como validación los últimos 8 cortes semanales cuyo horizonte ya es conocido, y los modelos se entrenan solo con cortes anteriores. Los primeros 4 cortes de validación calibran la incertidumbre y los últimos 4 miden cobertura y costo fuera de muestra.
+- **Alternativas:** validación cruzada aleatoria (filtraría información del futuro); una sola partición fija.
+- **Justificación:** respeta el orden del tiempo y compara a todos los modelos en la misma ventana, como pide el enunciado.
+
+### D11. Incertidumbre por residuos empíricos y pedido sobre la demanda semanal
+- **Decisión:** los cuantiles (p10/p50/p90 diarios) salen de los residuos fuera de muestra en escala log por familia. El pedido usa la distribución de residuos de la **suma semanal**, evaluada en el cuantil crítico de cada familia.
+- **Alternativas:** LightGBM con pérdida cuantílica (un modelo por cuantil); sumar los cuantiles diarios.
+- **Justificación:** se guarda la distribución completa, así que un cambio de costos cambia el pedido sin reentrenar. Sumar cuantiles diarios sobreestima el cuantil de la semana. El mismo método aplica al baseline, lo que hace justa la comparación.
+- **Métricas:** técnicas: WAPE, sesgo y cobertura p10–p90. De negocio: costo newsvendor `cu·faltante + co·sobrante` del pedido semanal, por unidad vendida.
+
+### D12. Criterio de reemplazo del modelo vigente
+- **Decisión:** el vigente inicial es el baseline. Cada semana se evalúan todos los candidatos en la misma ventana. El mejor retador reemplaza al vigente si reduce el costo de negocio al menos un 2% y no empeora el WAPE más de 0.01 (configurable). El vigente se reentrena con toda la historia antes de publicar.
+- **Justificación:** la decisión se basa en la métrica de negocio, con un margen para no cambiar de modelo por ruido. En el primer corte real, LightGBM redujo el costo un 27% (WAPE 0.127 vs. 0.151) y reemplazó al baseline.

@@ -15,10 +15,10 @@ TIENDAS = [1, 2, 3]
 FAMILIAS = ["GROCERY I", "PRODUCE", "AUTOMOTIVE"]
 
 
-def escribir_kaggle(carpeta, semilla=0):
+def escribir_kaggle(carpeta, semilla=0, dias=DIAS):
     rng = np.random.default_rng(semilla)
     carpeta.mkdir(parents=True, exist_ok=True)
-    fechas = pd.date_range(FECHA_INICIO, periods=DIAS)
+    fechas = pd.date_range(FECHA_INICIO, periods=dias)
     filas = []
     for f in fechas:
         for t in TIENDAS:
@@ -66,4 +66,15 @@ def cfg(tmp_path, datos_config):
     datos = copy.deepcopy(datos_config)
     datos["simulacion"]["dias_bandeja"] = 20
     escribir_kaggle(tmp_path / datos["rutas"]["kaggle"])
+    return Config(datos, tmp_path)
+
+
+@pytest.fixture
+def cfg_modelo(tmp_path, datos_config):
+    """Config para pruebas de modelado: 200 días de historia y un modelo pequeño y rápido."""
+    datos = copy.deepcopy(datos_config)
+    datos["simulacion"]["dias_bandeja"] = 21
+    datos["modelo"].update(semanas_entrenamiento=8, semanas_validacion=4)
+    datos["modelo"]["lightgbm"].update(n_estimators=20, num_leaves=7, min_child_samples=5)
+    escribir_kaggle(tmp_path / datos["rutas"]["kaggle"], dias=200)
     return Config(datos, tmp_path)
