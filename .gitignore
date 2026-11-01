@@ -1,0 +1,22 @@
+# Datos originales de Kaggle (nunca van a Git; se colocan localmente)
+store-sales-time-series-forecasting/
+store-sales-time-series-forecasting.zip
+*.zip
+*.csv
+*.parquet
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+# Entorno / IDE
+.env
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
