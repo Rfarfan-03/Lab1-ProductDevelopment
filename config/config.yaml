@@ -68,6 +68,7 @@ modelo:
     subsample: 0.8
     subsample_freq: 1
     colsample_bytree: 0.8
+    num_threads: 4             # fijo: LightGBM es determinista solo con el mismo número de hilos
 
 # Costos de negocio por unidad. Cambiarlos cambia el pedido sugerido sin tocar el código.
 #   costo_quiebre: margen perdido por cada unidad demandada que no se tenía (stockout)
