@@ -1,9 +1,21 @@
-# Datos originales de Kaggle (nunca van a Git; se colocan localmente)
+# Datos originales de Kaggle descargados (nunca van a Git)
 store-sales-time-series-forecasting/
-store-sales-time-series-forecasting.zip
 *.zip
+
+# Datos y modelos: viven en data/ y se versionan con DVC (solo los .dvc van a Git)
+/data/*
+!/data/*.dvc
+!/data/.gitignore
 *.csv
 *.parquet
+*.pkl
+*.txt.model
+
+# Airflow (logs y archivos de runtime)
+airflow/logs/
+airflow/plugins/
+airflow/config/
+.env
 
 # Python
 __pycache__/
@@ -12,9 +24,9 @@ __pycache__/
 .venv/
 venv/
 *.egg-info/
+build/
 
-# Entorno / IDE
-.env
+# IDE / SO
 .vscode/
 .idea/
 .DS_Store
