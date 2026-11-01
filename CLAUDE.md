@@ -39,4 +39,7 @@ versionados con DVC.
 
 ## Comandos útiles
 - Pruebas: `pytest`
-- Levantar Airflow: ver `README.md`.
+- Levantar Airflow: `docker compose up -d --build` (detalle en `README.md`).
+- Flujo sin Airflow: `python -m reposicion.cli operar --desde AAAA-MM-DD --hasta AAAA-MM-DD`
+- Versionar datos: `bash scripts/versionar_datos.sh` y commit de `data/*.dvc`.
+- Reproducir un pronóstico pasado: `bash scripts/reproducir_pronostico.sh AAAA-MM-DD`.

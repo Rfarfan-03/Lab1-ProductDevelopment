@@ -1,0 +1,6 @@
+outs:
+- md5: cc53d32da9b40d7c5106102e96a90a63.dir
+  size: 5114885
+  nfiles: 180
+  hash: md5
+  path: bandeja

@@ -2,10 +2,8 @@
 store-sales-time-series-forecasting/
 *.zip
 
-# Datos y modelos: viven en data/ y se versionan con DVC (solo los .dvc van a Git)
-/data/*
-!/data/*.dvc
-!/data/.gitignore
+# Datos y modelos: viven en data/ y se versionan con DVC. DVC mantiene data/.gitignore
+# con cada carpeta versionada; a Git solo van los archivos data/*.dvc.
 *.csv
 *.parquet
 *.pkl

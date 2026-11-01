@@ -27,7 +27,7 @@ def main(argv: list[str] | None = None) -> None:
     sub = p.add_subparsers(dest="comando", required=True)
     s = sub.add_parser("simular", help="Genera carga histórica y bandeja desde los CSV de Kaggle")
     s.add_argument("--forzar", action="store_true")
-    for nombre in ("ingerir", "entrenar", "pronosticar"):
+    for nombre in ("ingerir", "preparar", "entrenar", "pronosticar"):
         sub.add_parser(nombre).add_argument("--corte", required=True)
     sub.add_parser("seguimiento").add_argument("--fecha", required=True)
     o = sub.add_parser("operar", help="Ejecuta el flujo diario completo para un rango de fechas")
@@ -43,6 +43,10 @@ def main(argv: list[str] | None = None) -> None:
         print(json.dumps({k: v for k, v in meta.items() if k != "firma"}, indent=2))
     elif args.comando == "ingerir":
         print(json.dumps(ingesta.ingerir(cfg, args.corte)["faltantes"], indent=2))
+    elif args.comando == "preparar":
+        from .features import preparar
+
+        print(json.dumps({k: v for k, v in preparar(cfg, args.corte).items() if k != "cortes"}, indent=2))
     elif args.comando == "entrenar":
         print(json.dumps(entrenamiento.entrenar(cfg, args.corte), indent=2, default=str))
     elif args.comando == "pronosticar":
