@@ -15,7 +15,7 @@ import pandas as pd
 from . import archivos as io
 from .config import Config
 from .evaluacion import decidir, evaluar
-from .features import cargar_datos, construir, cortes_entrenamiento
+from .features import cargar_features
 from .modelos import crear_modelo, residuos
 from .reportes import reporte_comparacion
 
@@ -57,12 +57,7 @@ def entrenar(cfg: Config, corte) -> dict:
     horizonte = int(cfg["operacion"]["horizonte_dias"])
     n_val = int(mcfg["semanas_validacion"])
 
-    datos = cargar_datos(cfg, corte)
-    cortes = cortes_entrenamiento(corte, int(mcfg["semanas_entrenamiento"]) + n_val, horizonte,
-                                  datos.ventas["date"].min())
-    if len(cortes) < n_val + 4:
-        raise ValueError(f"Historia insuficiente para entrenar en {_f(corte)}: {len(cortes)} cortes")
-    df = construir(datos, cortes, horizonte, con_objetivo=True)
+    df, _, cortes = cargar_features(cfg, corte)
     es_val = df["corte"].isin(cortes[-n_val:])
     entren, valid = df[~es_val], df[es_val]
 

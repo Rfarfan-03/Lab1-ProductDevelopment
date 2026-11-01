@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -172,3 +173,45 @@ def cortes_entrenamiento(corte: pd.Timestamp, n: int, horizonte: int, inicio_dat
     cortes = [ultimo - pd.Timedelta(days=7 * k) for k in range(n)]
     minimo = inicio_datos + pd.Timedelta(days=HISTORIA_MINIMA_DIAS)
     return sorted(c for c in cortes if c >= minimo)
+
+
+# ------------------------------------------------------------------ paso del flujo
+
+def ruta_features(cfg: Config, corte) -> Path:
+    return cfg.ruta("features") / f"corte={pd.Timestamp(corte).strftime('%Y-%m-%d')}"
+
+
+def preparar(cfg: Config, corte) -> dict:
+    """Paso 'preparación de datos': features de entrenamiento (cortes pasados con objetivo)
+    y de predicción (el corte actual), persistidas para entrenar y pronosticar."""
+    from . import archivos as io
+
+    corte = pd.Timestamp(corte)
+    horizonte = int(cfg["operacion"]["horizonte_dias"])
+    mcfg = cfg["modelo"]
+    n_val = int(mcfg["semanas_validacion"])
+    datos = cargar_datos(cfg, corte)
+    cortes = cortes_entrenamiento(corte, int(mcfg["semanas_entrenamiento"]) + n_val, horizonte,
+                                  datos.ventas["date"].min())
+    if len(cortes) < n_val + 4:
+        raise ValueError(f"Historia insuficiente para entrenar en {corte.date()}: {len(cortes)} cortes")
+    destino = ruta_features(cfg, corte)
+    entren = construir(datos, cortes, horizonte, con_objetivo=True)
+    pred = construir(datos, [corte], horizonte, con_objetivo=False)
+    io.escribir_parquet(entren, destino / "entrenamiento.parquet")
+    io.escribir_parquet(pred, destino / "prediccion.parquet")
+    meta = {"corte": corte.strftime("%Y-%m-%d"), "cortes": [c.strftime("%Y-%m-%d") for c in cortes],
+            "filas_entrenamiento": len(entren), "filas_prediccion": len(pred)}
+    io.escribir_json(meta, destino / "metadata.json")
+    return meta
+
+
+def cargar_features(cfg: Config, corte) -> tuple[pd.DataFrame, pd.DataFrame, list[pd.Timestamp]]:
+    from . import archivos as io
+
+    destino = ruta_features(cfg, corte)
+    if not (destino / "metadata.json").exists():
+        preparar(cfg, corte)
+    meta = io.leer_json(destino / "metadata.json")
+    return (pd.read_parquet(destino / "entrenamiento.parquet"), pd.read_parquet(destino / "prediccion.parquet"),
+            [pd.Timestamp(c) for c in meta["cortes"]])

@@ -15,7 +15,7 @@ import pandas as pd
 from . import archivos as io
 from .config import Config
 from .entrenamiento import cargar_residuos, ruta_modelo
-from .features import cargar_datos, construir
+from .features import cargar_features
 from .modelos import ModeloBaseline, ModeloLGBM, aplicar_cuantil
 from .pedido import pedido_semanal
 
@@ -41,8 +41,7 @@ def pronosticar(cfg: Config, corte, forzar: bool = False) -> dict:
               if vigente == "lightgbm" else ModeloBaseline())
     tablas = cargar_residuos(cfg, corte)
 
-    horizonte = int(cfg["operacion"]["horizonte_dias"])
-    x = construir(cargar_datos(cfg, corte), [corte], horizonte, con_objetivo=False)
+    _, x, _ = cargar_features(cfg, corte)
     pron = x[["corte", "store_nbr", "family", "date", "h"]].copy()
     pron["yhat"] = modelo.predecir(x)
     for q in cfg["operacion"]["cuantiles"]:
