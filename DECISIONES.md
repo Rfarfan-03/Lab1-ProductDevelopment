@@ -19,7 +19,7 @@
 
   | Fuente | Disponible |
   |---|---|
-  | Ventas | día siguiente (D+1) |
+  | Ventas | día siguiente (D+1); algunos archivos llegan 2 días tarde |
   | Transacciones | dos días después (D+2); algunos archivos no llegan |
   | Petróleo | D+1, solo días hábiles |
   | Promociones | 14 días antes |
@@ -33,3 +33,20 @@
 - **Decisión:** cada archivo de la bandeja indica en su nombre la fecha del dato y la fecha de entrega. En cada fecha de corte solo se usan los archivos entregados hasta ese día.
 - **Alternativas:** filtrar solo por la fecha del dato.
 - **Justificación:** filtrar por fecha del dato no evita usar correcciones ni datos tardíos que en ese momento aún no existían. Así se garantiza que cada pronóstico se pueda reconstruir con lo que se sabía al emitirlo.
+
+### D5. Corte del histórico derivado de los datos
+- **Decisión:** la carga histórica termina `dias_bandeja` (45) días antes de la última fecha de `train.csv`; todo lo posterior se convierte en archivos de la bandeja. La fecha se puede fijar en la config.
+- **Alternativas:** una fecha fija en el código.
+- **Justificación:** el producto se evaluará sobre un periodo no publicado. Si se calcula a partir de los archivos colocados, el flujo funciona con cualquier rango de fechas sin cambiar el código.
+
+## Validación de datos y correcciones
+
+### D6. Validación en dos niveles con cuarentena
+- **Decisión:** se valida el esquema, los tipos, los rangos (por ejemplo, ventas negativas), las tiendas y familias desconocidas, la fecha que no coincide con la del archivo y las llaves duplicadas. Si menos del 1% de las filas son inválidas, se descartan solo esas filas; si se supera el 1%, el archivo completo va a `data/cuarentena/` con un JSON que explica el motivo y se usa la última versión válida anterior, si existe.
+- **Alternativas:** fallar la tarea ante cualquier error; descartar siempre solo las filas malas.
+- **Justificación:** fallar detiene toda la operación por un archivo, y descartar siempre filas deja pasar archivos sistemáticamente corruptos. Las situaciones esperadas (un archivo que no llegó, petróleo sin precio, ventas en cero) se reportan como aviso y no fallan.
+
+### D7. Correcciones como nuevas versiones; el staging se reconstruye en cada corte
+- **Decisión:** una corrección llega como un archivo nuevo `__v2` (la bandeja nunca se sobreescribe). En cada fecha de corte, la ingesta reconstruye el staging desde cero con la versión válida más reciente entregada hasta ese día.
+- **Alternativas:** aplicar las correcciones de forma incremental (upsert) sobre una tabla acumulada.
+- **Justificación:** reconstruir es idempotente y reproduce exactamente lo que se sabía en un corte pasado, lo que permite el backfill. Con un upsert, el estado depende del orden de ejecución. Con estos datos el costo es bajo (~4 s por corte).

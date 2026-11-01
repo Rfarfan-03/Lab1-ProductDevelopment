@@ -1,15 +1,8 @@
 import copy
 
 import pytest
-import yaml
 
-from reposicion.config import RAIZ_REPO, Config, cargar_config
-
-
-@pytest.fixture
-def datos_config():
-    with open(RAIZ_REPO / "config" / "config.yaml", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+from reposicion.config import Config, cargar_config
 
 
 def test_config_del_repo_carga():
